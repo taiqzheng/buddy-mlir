@@ -1,5 +1,11 @@
 func.func private @printMemrefF64(memref<*xf64>)
 
+#cos_trait = {
+  doc = "tensor trait for math.cos operation",
+  indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>],
+  iterator_types = ["parallel"]
+}
+
 func.func @hanning_window(%len : i32) -> tensor<?xf64>{
   %c1 = arith.constant 1 : i32
   %start = arith.subi %c1, %len : i32
@@ -37,7 +43,13 @@ func.func @hanning_window(%len : i32) -> tensor<?xf64>{
     ins(%t_mul_pi, %t_c : tensor<?xf64>, tensor<?xf64>)
     outs(%t : tensor<?xf64>) -> tensor<?xf64>
 
-  %t_cos = math.cos %t_div : tensor<?xf64>
+  %t_cos = linalg.generic #cos_trait 
+    ins(%t_div : tensor<?xf64>)
+    outs(%t : tensor<?xf64>) {
+    ^bb0(%a : f64, %b : f64):
+      %elem = math.cos %a : f64
+      linalg.yield %elem : f64
+  } -> tensor<?xf64>
 
   %half_f64 = arith.constant 0.5 : f64
   %t_half = tensor.generate %len_index {
@@ -51,37 +63,12 @@ func.func @hanning_window(%len : i32) -> tensor<?xf64>{
   %t_res = linalg.add
     ins(%t_mul_half, %t_half : tensor<?xf64>, tensor<?xf64>)
     outs(%t : tensor<?xf64>) -> tensor<?xf64>
-  // %t_div = arith.divf %t_mul_pi, %t_c : tensor<?xf64>
-  // %t_cos = math.cos %t_div : tensor<?xf64>
-
-  // %half_f64 = arith.constant 0.5 : f64
-  // %t_half = tensor.generate %len_index {
-  //   ^bb0(%i : index):
-  //     tensor.yield %half_f64 : f64
-  // } : tensor<?xf64>
-
-  // %t_mul_half = arith.mulf %t_cos, %t_half : tensor<?xf64>
-  // %t_res = arith.addf %t_mul_half, %t_half : tensor<?xf64>
-
-  // calculate "0.5 + 0.5*cos(pi*%t/(%len-1))""  // TODO
-
-  // %t_pi = arith.mulf %t, %pi : tensor<?xf64>
-
-  // %c_i32 = arith.subi %len, %c1 : i32
-  // %c_f64 = arith.sitofp %c_i32 : i32 to f64
-  // %t_div = arith.divf %t_pi, %c_f64 : tensor<?xf64>
-
-  // %t_cos = math.cos %t_div : tensor<?xf64>
-  // %f_half = arith.constant 0.5 : f64
-  // %t_mul = arith.mulf %t_cos, %f_half : tensor<?xf64>
-
-  // %t_res = arith.addf %t_mul, %f_half : tensor<?xf64>
 
   return %t_res : tensor<?xf64>
 }
 
 func.func @main() {
-  %c5 = arith.constant 8 : i32
+  %c5 = arith.constant 7 : i32
   %t = func.call @hanning_window(%c5) : (i32) -> tensor<?xf64>
 
   %m = bufferization.to_memref %t : memref<?xf64>
