@@ -1,0 +1,4 @@
+# ninja log v5
+0	183	1711007485308668904	whisper-preprocessor.o	37c8f3bc8de2655a
+0	183	1711007485308668904	/root/buddy-mlir/examples/BuddyWhisper/develop/build/whisper-preprocessor.o	37c8f3bc8de2655a
+183	189	1711007485320669036	libwhisperPreprocessor.a	804b56b016279bed

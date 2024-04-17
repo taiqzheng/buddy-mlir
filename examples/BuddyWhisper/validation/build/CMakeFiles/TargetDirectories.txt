@@ -1,0 +1,4 @@
+/root/buddy-mlir/examples/BuddyWhisper/validation/build/CMakeFiles/DynamicPad.dir
+/root/buddy-mlir/examples/BuddyWhisper/validation/build/CMakeFiles/dynamic-run.dir
+/root/buddy-mlir/examples/BuddyWhisper/validation/build/CMakeFiles/edit_cache.dir
+/root/buddy-mlir/examples/BuddyWhisper/validation/build/CMakeFiles/rebuild_cache.dir

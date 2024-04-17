@@ -1,4 +1,4 @@
-func.func private @printMemrefF64(memref<*xf64>)
+func.func private @printMemrefF64(memref<*xf32>)
 
 #cos_trait = {
   doc = "tensor trait for math.cos operation",
@@ -68,7 +68,7 @@ func.func @hanning_window(%len : i32) -> tensor<?xf64>{
 }
 
 func.func @main() {
-  %c5 = arith.constant 7 : i32
+  %c5 = arith.constant 8 : i32
   %t = func.call @hanning_window(%c5) : (i32) -> tensor<?xf64>
 
   %m = bufferization.to_memref %t : memref<?xf64>

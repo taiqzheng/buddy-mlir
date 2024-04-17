@@ -33,7 +33,7 @@
 
 // MemRef descriptor.
 // - T represents the type of the elements.
-// - N represents the number of dimensions.
+// - N represents the number of dimensions. 
 // - The storage order is NCHW.
 template <typename T, size_t N> class MemRef {
 public:
