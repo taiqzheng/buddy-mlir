@@ -73,8 +73,8 @@ func.func @radf4Extend(%cc : memref<400xf64>, %ch : memref<400xf64>, %wa : memre
 
       %wa1im2 = func.call @WA(%wa, %i1, %im2, %ido, %i1) : (memref<?xf64>, index, index, index, index) -> (f64)
       %wa1im1 = func.call @WA(%wa, %i1, %im1, %ido, %i1) : (memref<?xf64>, index, index, index, index) -> (f64)
-      %ccim1k2 = func.call @CC(%cc, %im1, %k, %i1, %ido, %l1) : (memref<400xf64>, index, index, index, index, index) -> (f64)
-      %ccik2 = func.call @CC(%cc, %i, %k, %i1, %ido, %l1) : (memref<400xf64>, index, index, index, index, index) -> (f64)
+      %ccim1k2 = func.call @CC(%cc, %im1, %k, %i2, %ido, %l1) : (memref<400xf64>, index, index, index, index, index) -> (f64)
+      %ccik2 = func.call @CC(%cc, %i, %k, %i2, %ido, %l1) : (memref<400xf64>, index, index, index, index, index) -> (f64)
       %cr3_ci3:2 = func.call @MULPM(%wa1im2, %wa1im1, %ccim1k2, %ccik2) : (f64, f64, f64, f64) -> (f64, f64)
 
       %wa2im2 = func.call @WA(%wa, %i2, %im2, %ido, %i1) : (memref<?xf64>, index, index, index, index) -> (f64)
@@ -206,8 +206,8 @@ func.func @radf5Extend(%cc : memref<400xf64>, %ch : memref<400xf64>, %wa : memre
 
       %wa1im2 = func.call @WA(%wa, %i1, %im2, %ido, %i1) : (memref<?xf64>, index, index, index, index) -> (f64)
       %wa1im1 = func.call @WA(%wa, %i1, %im1, %ido, %i1) : (memref<?xf64>, index, index, index, index) -> (f64)
-      %ccim1k2 = func.call @CC(%cc, %im1, %k, %i1, %ido, %l1) : (memref<400xf64>, index, index, index, index, index) -> (f64)
-      %ccik2 = func.call @CC(%cc, %i, %k, %i1, %ido, %l1) : (memref<400xf64>, index, index, index, index, index) -> (f64)
+      %ccim1k2 = func.call @CC(%cc, %im1, %k, %i2, %ido, %l1) : (memref<400xf64>, index, index, index, index, index) -> (f64)
+      %ccik2 = func.call @CC(%cc, %i, %k, %i2, %ido, %l1) : (memref<400xf64>, index, index, index, index, index) -> (f64)
       %dr3_di3:2 = func.call @MULPM(%wa1im2, %wa1im1, %ccim1k2, %ccik2) : (f64, f64, f64, f64) -> (f64, f64)
 
       %wa2im2 = func.call @WA(%wa, %i2, %im2, %ido, %i1) : (memref<?xf64>, index, index, index, index) -> (f64)
