@@ -12,6 +12,40 @@ MLIR_RUNNER_UTILS := ../../llvm/build/lib/libmlir_runner_utils.dylib
 MLIR_C_RUNNER_UTILS := ../../llvm/build/lib/libmlir_c_runner_utils.dylib
 endif
 
+tensor-insert-experiment:
+	@${BUDDY_OPT} ./tensor.mlir  \
+	    -tensor-bufferize \
+		-arith-expand \
+		-linalg-bufferize \
+		-tensor-bufferize \
+		-convert-linalg-to-loops \
+		-func-bufferize \
+		-arith-bufferize \
+		-convert-scf-to-cf \
+		-expand-strided-metadata \
+		-memref-expand \
+		-arith-expand \
+		-convert-cf-to-llvm \
+		-convert-arith-to-llvm \
+		-finalize-memref-to-llvm \
+		-convert-func-to-llvm \
+		-reconcile-unrealized-casts
+
+tensor-insert-oneshot:
+	@${BUDDY_OPT} ./tensor.mlir  \
+		-one-shot-bufferize=bufferize-function-boundaries \
+		-arith-expand \
+		-convert-linalg-to-loops \
+		-convert-scf-to-cf \
+		-expand-strided-metadata \
+		-memref-expand \
+		-arith-expand \
+		-convert-cf-to-llvm \
+		-convert-arith-to-llvm \
+		-finalize-memref-to-llvm \
+		-convert-func-to-llvm \
+		-reconcile-unrealized-casts 
+
 pad-run:
 	@${BUDDY_OPT} ./pad.mlir  \
 	    --tensor-bufferize --linalg-bufferize --tensor-bufferize \

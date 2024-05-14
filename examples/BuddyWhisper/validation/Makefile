@@ -19,15 +19,13 @@ endif
 
 indexToF64:
 	@${BUDDY_OPT} ./indexToF64.mlir  \
-		-tensor-bufferize -linalg-bufferize -tensor-bufferize -bufferization-bufferize \
-		-func-bufferize \
+		-one-shot-bufferize=bufferize-function-boundaries \
 		-arith-expand  \
 		-convert-math-to-funcs \
 		-convert-vector-to-scf \
 		-convert-linalg-to-loops \
 		-convert-scf-to-cf \
 		-convert-cf-to-llvm \
-		-finalizing-bufferize \
 		-finalize-memref-to-llvm \
 		-convert-arith-to-llvm \
 		-convert-math-to-llvm \
@@ -40,36 +38,32 @@ indexToF64:
 
 h2m-run:
 	@${BUDDY_OPT} ./hertz2mel.mlir  \
-		--tensor-bufferize --linalg-bufferize --tensor-bufferize -bufferization-bufferize \
-		--func-bufferize \
-		--arith-expand  \
-		--convert-math-to-funcs \
-		--convert-vector-to-scf \
-		--convert-linalg-to-loops \
-		--convert-scf-to-cf \
-		--convert-cf-to-llvm \
-		--finalizing-bufferize \
-		--finalize-memref-to-llvm \
-		--convert-arith-to-llvm \
-		--convert-math-to-llvm \
-		--convert-math-to-libm \
-		--convert-vector-to-llvm \
-		--convert-func-to-llvm \
-		--reconcile-unrealized-casts | \
-	${MLIR_CPU_RUNNER} ${OPT_FLAG} -e main -entry-point-result=void \
-		-shared-libs=${MLIR_RUNNER_UTILS} -shared-libs=${MLIR_C_RUNNER_UTILS} 
-
-run-radf5:
-	@${BUDDY_OPT} ./radf5.mlir  \
-		-tensor-bufferize -linalg-bufferize -tensor-bufferize -bufferization-bufferize \
-		-func-bufferize \
+		-one-shot-bufferize=bufferize-function-boundaries \
 		-arith-expand  \
 		-convert-math-to-funcs \
 		-convert-vector-to-scf \
 		-convert-linalg-to-loops \
 		-convert-scf-to-cf \
 		-convert-cf-to-llvm \
-		-finalizing-bufferize \
+		-finalize-memref-to-llvm \
+		-convert-arith-to-llvm \
+		-convert-math-to-llvm \
+		-convert-math-to-libm \
+		-convert-vector-to-llvm \
+		-convert-func-to-llvm \
+		-reconcile-unrealized-casts | \
+	${MLIR_CPU_RUNNER} ${OPT_FLAG} -e main -entry-point-result=void \
+		-shared-libs=${MLIR_RUNNER_UTILS} -shared-libs=${MLIR_C_RUNNER_UTILS} 
+
+run-radf5:
+	@${BUDDY_OPT} ./radf5.mlir  \
+		-one-shot-bufferize=bufferize-function-boundaries \
+		-arith-expand  \
+		-convert-math-to-funcs \
+		-convert-vector-to-scf \
+		-convert-linalg-to-loops \
+		-convert-scf-to-cf \
+		-convert-cf-to-llvm \
 		-finalize-memref-to-llvm \
 		-convert-arith-to-llvm \
 		-convert-math-to-llvm \
@@ -82,15 +76,13 @@ run-radf5:
 
 run-radf4:
 	@${BUDDY_OPT} ./radf4.mlir  \
-		-tensor-bufferize -linalg-bufferize -tensor-bufferize -bufferization-bufferize \
-		-func-bufferize \
+		-one-shot-bufferize=bufferize-function-boundaries \
 		-arith-expand  \
 		-convert-math-to-funcs \
 		-convert-vector-to-scf \
 		-convert-linalg-to-loops \
 		-convert-scf-to-cf \
 		-convert-cf-to-llvm \
-		-finalizing-bufferize \
 		-finalize-memref-to-llvm \
 		-convert-arith-to-llvm \
 		-convert-math-to-llvm \
@@ -103,15 +95,13 @@ run-radf4:
 
 run-rfft400:
 	@${BUDDY_OPT} ./rfft400.mlir  \
-		-tensor-bufferize -linalg-bufferize -tensor-bufferize -bufferization-bufferize \
-		-func-bufferize \
+		-one-shot-bufferize=bufferize-function-boundaries \
 		-arith-expand  \
 		-convert-math-to-funcs \
 		-convert-vector-to-scf \
 		-convert-linalg-to-loops \
 		-convert-scf-to-cf \
 		-convert-cf-to-llvm \
-		-finalizing-bufferize \
 		-finalize-memref-to-llvm \
 		-convert-arith-to-llvm \
 		-convert-math-to-llvm \
@@ -125,40 +115,36 @@ run-rfft400:
 
 pad-constant-run:
 	@${BUDDY_OPT} ./pad_constant.mlir  \
-	    --tensor-bufferize \
-		--linalg-bufferize \
-		--convert-linalg-to-loops \
-		--func-bufferize \
-		--arith-bufferize \
-		--finalizing-bufferize \
-		--convert-scf-to-cf \
-		--expand-strided-metadata \
-		--lower-affine \
-		--convert-vector-to-llvm --memref-expand -arith-expand \
-		--convert-arith-to-llvm \
-		--finalize-memref-to-llvm \
-		--convert-func-to-llvm \
-		--reconcile-unrealized-casts | \
+	    -one-shot-bufferize=bufferize-function-boundaries \
+		-convert-linalg-to-loops \
+		-convert-scf-to-cf \
+		-expand-strided-metadata \
+		-lower-affine \
+		-convert-vector-to-llvm \
+		-memref-expand \
+		-convert-arith-to-llvm \
+		-finalize-memref-to-llvm \
+		-convert-func-to-llvm \
+		-reconcile-unrealized-casts | \
 	${MLIR_CPU_RUNNER} ${OPT_FLAG} -e main -entry-point-result=void \
 		-shared-libs=${MLIR_RUNNER_UTILS} -shared-libs=${MLIR_C_RUNNER_UTILS}
 
 if-call-run:
 	@${BUDDY_OPT} ./if-call.mlir  \
-     	--tensor-bufferize \
-		--linalg-bufferize \
-		--convert-linalg-to-loops \
-		--func-bufferize \
-		--arith-bufferize \
-		--finalizing-bufferize \
-		--convert-scf-to-cf \
-		--expand-strided-metadata \
-		--lower-affine \
-		--convert-vector-to-llvm --memref-expand -arith-expand \
-		--convert-arith-to-llvm \
-		--finalize-memref-to-llvm --convert-math-to-llvm \
-		--llvm-request-c-wrappers \
-		--convert-func-to-llvm \
-		--reconcile-unrealized-casts | \
+		-one-shot-bufferize=bufferize-function-boundaries \
+		-convert-linalg-to-loops \
+		-convert-scf-to-cf \
+		-expand-strided-metadata \
+		-lower-affine \
+		-convert-vector-to-llvm \
+		-memref-expand \
+		-arith-expand \
+		-convert-arith-to-llvm \
+		-finalize-memref-to-llvm \
+		-convert-math-to-llvm \
+		-llvm-request-c-wrappers \
+		-convert-func-to-llvm \
+		-reconcile-unrealized-casts | \
 	${MLIR_CPU_RUNNER} ${OPT_FLAG} -e main -entry-point-result=void \
 		-shared-libs=${MLIR_RUNNER_UTILS} -shared-libs=${MLIR_C_RUNNER_UTILS}
 
@@ -175,23 +161,3 @@ gen-dynamic-pad:
 	${MLIR_TRANSLATE} -mlir-to-llvmir | \
 		${LLC} --mtriple=x86_64-unknown-linux-gnu -mattr=+avx512f -filetype=obj \
 		-o ./dynamicPad.o
-
-example2:
-	@${BUDDY_OPT} ./example.mlir  \
-     	--arith-bufferize --tensor-bufferize --linalg-bufferize\
-		--convert-linalg-to-loops \
-		--func-bufferize \
-		--arith-expand  \
-		--convert-scf-to-cf \
-		--expand-strided-metadata \
-		--finalizing-bufferize \
-		--finalize-memref-to-llvm \
-		--convert-arith-to-llvm \
-		--convert-func-to-llvm \
-		--reconcile-unrealized-casts | \
-	${MLIR_CPU_RUNNER} ${OPT_FLAG} -e main -entry-point-result=void \
-		-shared-libs=${MLIR_RUNNER_UTILS} -shared-libs=${MLIR_C_RUNNER_UTILS}
-
-
---mtriple=x86_64-unknown-linux-gnu -mattr=+avx512f -filetype=obj \
-		-o dynamicPad.o
