@@ -42,25 +42,61 @@ using namespace mlir::linalg;
 
 namespace {
 
-class DAPFirLowering : public OpRewritePattern<dap::FirOp> {
+class DAPFIRLowering : public OpRewritePattern<dap::FIROp> {
 public:
-  using OpRewritePattern<dap::FirOp>::OpRewritePattern;
+  using OpRewritePattern<dap::FIROp>::OpRewritePattern;
 
-  explicit DAPFirLowering(MLIRContext *context) : OpRewritePattern(context) {}
+  explicit DAPFIRLowering(MLIRContext *context) : OpRewritePattern(context) {}
 
-  LogicalResult matchAndRewrite(dap::FirOp op,
+  LogicalResult matchAndRewrite(dap::FIROp op,
                                 PatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
     auto ctx = op->getContext();
+
     Value input = op->getOperand(0);
     Value kernel = op->getOperand(1);
     Value output = op->getOperand(2);
 
     Value c0 = rewriter.create<arith::ConstantIndexOp>(loc, 0);
     Value c1 = rewriter.create<arith::ConstantIndexOp>(loc, 1);
-    FloatType f32 = FloatType::getF32(ctx);
-    Value f0 =
-        rewriter.create<arith::ConstantFloatOp>(loc, APFloat(float(0.0)), f32);
+
+    // Verify that operands are MemRefType with FloatType elements of the same
+    // width; otherwise, return failure.
+    MemRefType inputType = dyn_cast<MemRefType>(input.getType());
+    MemRefType kernelType = dyn_cast<MemRefType>(kernel.getType());
+    MemRefType outputType = dyn_cast<MemRefType>(output.getType());
+    if (!inputType || !kernelType || !outputType) {
+      llvm::outs() << "Operands of 'dap.fir' is not a MemRefType in the "
+                      "DAPFIRLowering rewrite pattern.\n";
+      return failure();
+    }
+
+    FloatType fTy = dyn_cast<FloatType>(inputType.getElementType());
+    FloatType fTy_kern = dyn_cast<FloatType>(kernelType.getElementType());
+    FloatType fTy_out = dyn_cast<FloatType>(outputType.getElementType());
+    if (!fTy || !fTy_kern || !fTy_out) {
+      llvm::outs() << "ElementType of 'dap.fir' is not a FloatType in the "
+                      "DAPFIRLowering rewrite pattern.\n";
+      return failure();
+    }
+
+    if (fTy.getWidth() != fTy_kern.getWidth() ||
+        fTy.getWidth() != fTy_out.getWidth()) {
+      llvm::outs() << "Operands of 'dap.fir' have different ElementTypes in "
+                      "the DAPFIRLowering rewrite pattern.\n";
+      return failure();
+    }
+
+    Value f0;
+    if (fTy.getWidth() == 32) {
+      f0 = rewriter.create<ConstantFloatOp>(loc, APFloat(float(0.0)), fTy);
+    } else if (fTy.getWidth() == 64) {
+      f0 = rewriter.create<ConstantFloatOp>(loc, APFloat(double(0.0)), fTy);
+    } else {
+      llvm::outs() << "Unsupported FloatType width: " << fTy.getWidth()
+                   << " in the DAPFIRLowering rewrite pattern.\n";
+      return failure();
+    }
 
     Value kernelSize = rewriter.create<memref::DimOp>(loc, kernel, c0);
     Value dataLen = rewriter.create<memref::DimOp>(loc, output, c0);
@@ -308,7 +344,7 @@ public:
 
 void populateLowerDAPConversionPatterns(RewritePatternSet &patterns,
                                         int64_t stride) {
-  patterns.add<DAPFirLowering>(patterns.getContext());
+  patterns.add<DAPFIRLowering>(patterns.getContext());
   patterns.add<DAPBiquadLowering>(patterns.getContext(), stride);
   patterns.add<DAPIirLowering>(patterns.getContext());
 }

@@ -50,7 +50,7 @@ add_custom_command(
   COMMAND 
     ${CMAKE_BINARY_DIR}/bin/buddy-opt ${CMAKE_CURRENT_SOURCE_DIR}/DAP.mlir 
       -lower-dap="DAP-vector-splitting=${SPLITING_SIZE}"
-      --convert-linalg-to-affine-loops
+      -convert-linalg-to-affine-loops
       -arith-expand
       -lower-affine
       -convert-scf-to-cf

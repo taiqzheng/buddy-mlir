@@ -18,8 +18,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-func.func @buddy_fir(%in : memref<?xf32>, %filter : memref<?xf32>, %out : memref<?xf32>) -> () {
+func.func @buddy_fir_f32(%in : memref<?xf32>, %filter : memref<?xf32>, %out : memref<?xf32>) -> () {
   dap.fir %in, %filter, %out : memref<?xf32>, memref<?xf32>, memref<?xf32>
+  return
+}
+
+func.func @buddy_fir_f64(%in : memref<?xf64>, %filter : memref<?xf64>, %out : memref<?xf64>) -> () {
+  dap.fir %in, %filter, %out : memref<?xf64>, memref<?xf64>, memref<?xf64>
   return
 }
 
