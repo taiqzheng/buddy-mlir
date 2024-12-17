@@ -27,15 +27,16 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 
-def DAP_FirOp : DAP_Op<"fir"> {
-  let summary = [{FIR filter, a finite impulse response (FIR) filter is a linear
+def DAP_FIROp : DAP_Op<"fir"> {
+  let summary = "Finite impulse response (FIR) operation.";
+  let description = [{FIR filter, a finite impulse response (FIR) filter is a linear
   time-invariant filter that is used to filter a signal. It is a linear
   convolution of the input signal with a filter kernel.
 
   ```mlir
-    dsp.fir %input, %kernel, %output :memref<?x?xf32>, memref<?x?xf32>, 
-            memref<?x?xf32>
+    dap.fir %input, %kernel, %output : memref<?xf32>, memref<?xf32>, memref<?xf32>
   ```
+  Note: All three operands must have the same element type. 
   }];
 
   let arguments = (ins Arg<AnyRankedOrUnrankedMemRef, "inputMemref",

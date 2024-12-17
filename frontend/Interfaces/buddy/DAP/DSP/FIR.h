@@ -24,18 +24,24 @@
 #include "buddy/Core/Container.h"
 #include "buddy/DAP/AudioContainer.h"
 #include "buddy/DAP/DSP/Window.h"
+#include <type_traits>
 
 namespace dap {
 namespace detail {
 // Declare the Fir C interface.
 extern "C" {
-// TODO: support both float and double.
-void _mlir_ciface_buddy_fir(MemRef<float, 1> *inputBuddyFIR,
-                            MemRef<float, 1> *kernelBuddyFIR,
-                            MemRef<float, 1> *outputBuddyFIR);
-void _mlir_ciface_buddy_fir_vectorization(MemRef<float, 1> *inputBuddyFIR,
-                                          MemRef<float, 1> *kernelBuddyFIR,
-                                          MemRef<float, 1> *outputBuddyFIR);
+void _mlir_ciface_buddy_fir_f32(MemRef<float, 1> *inputBuddyFIR,
+                                MemRef<float, 1> *kernelBuddyFIR,
+                                MemRef<float, 1> *outputBuddyFIR);
+void _mlir_ciface_buddy_fir_vectorization_f32(MemRef<float, 1> *inputBuddyFIR,
+                                              MemRef<float, 1> *kernelBuddyFIR,
+                                              MemRef<float, 1> *outputBuddyFIR);
+void _mlir_ciface_buddy_fir_f64(MemRef<double, 1> *inputBuddyFIR,
+                                MemRef<double, 1> *kernelBuddyFIR,
+                                MemRef<double, 1> *outputBuddyFIR);
+void _mlir_ciface_buddy_fir_vectorization_f64(MemRef<double, 1> *inputBuddyFIR,
+                                              MemRef<double, 1> *kernelBuddyFIR,
+                                              MemRef<double, 1> *outputBuddyFIR);
 }
 } // namespace detail
 
@@ -70,14 +76,23 @@ void firLowpass(MemRef<T, N> &input, WINDOW_TYPE type, size_t len, T cutoff,
 }
 
 template <typename T, size_t N>
-void FIR(MemRef<float, N> *input, MemRef<T, N> *filter,
-         MemRef<float, N> *output, bool isVectorization = false) {
+void FIR(MemRef<T, N> *input, MemRef<T, N> *filter,
+         MemRef<T, N> *output, bool isVectorization = false) {
+  static_assert(std::is_same<T, float>::value || std::is_same<T, double>::value,
+                  "T must be either float (f32) or double (f64)");
   if (N != 1)
     assert(0 && "Only mono audio is supported for now.");
-  if (!isVectorization)
-    detail::_mlir_ciface_buddy_fir(input, filter, output);
-  else
-    detail::_mlir_ciface_buddy_fir_vectorization(input, filter, output);
+  if constexpr (std::is_same<T, float>::value) {
+    if (!isVectorization)
+      detail::_mlir_ciface_buddy_fir_f32(input, filter, output);
+    else
+      detail::_mlir_ciface_buddy_fir_vectorization_f32(input, filter, output);
+  } else if constexpr (std::is_same<T, double>::value) {
+    if (!isVectorization)
+      detail::_mlir_ciface_buddy_fir_f64(input, filter, output);
+    else
+      detail::_mlir_ciface_buddy_fir_vectorization_f64(input, filter, output);
+  }
 }
 } // namespace dap
 

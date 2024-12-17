@@ -44,14 +44,14 @@ using namespace mlir::linalg;
 
 namespace {
 
-class DAPFIRVectorization : public OpRewritePattern<dap::FirOp> {
+class DAPFIRVectorization : public OpRewritePattern<dap::FIROp> {
 public:
-  using OpRewritePattern<dap::FirOp>::OpRewritePattern;
+  using OpRewritePattern<dap::FIROp>::OpRewritePattern;
 
   explicit DAPFIRVectorization(MLIRContext *context)
       : OpRewritePattern(context) {}
 
-  LogicalResult matchAndRewrite(dap::FirOp op,
+  LogicalResult matchAndRewrite(dap::FIROp op,
                                 PatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
     auto ctx = op->getContext();
@@ -64,6 +64,33 @@ public:
     Value c1 = rewriter.create<ConstantIndexOp>(loc, 1);
     Value c2 = rewriter.create<ConstantIndexOp>(loc, 2);
 
+    // Verify that operands are MemRefType with FloatType elements of the same
+    // width; otherwise, return failure.
+    MemRefType inputType = dyn_cast<MemRefType>(input.getType());
+    MemRefType kernelType = dyn_cast<MemRefType>(kernel.getType());
+    MemRefType outputType = dyn_cast<MemRefType>(output.getType());
+    if (!inputType || !kernelType || !outputType) {
+      llvm::outs() << "Operands of 'dap.fir' is not a MemRefType in the "
+                      "DAPFIRVectorization rewrite pattern.\n";
+      return failure();
+    }
+
+    FloatType fTy = dyn_cast<FloatType>(inputType.getElementType());
+    FloatType fTy_kern = dyn_cast<FloatType>(kernelType.getElementType());
+    FloatType fTy_out = dyn_cast<FloatType>(outputType.getElementType());
+    if (!fTy || !fTy_kern || !fTy_out) {
+      llvm::outs() << "ElementType of 'dap.fir' is not a FloatType in the "
+                      "DAPFIRVectorization rewrite pattern.\n";
+      return failure();
+    }
+
+    if (fTy.getWidth() != fTy_kern.getWidth() ||
+        fTy.getWidth() != fTy_out.getWidth()) {
+      llvm::outs() << "Operands of 'dap.fir' have different ElementTypes in "
+                      "the DAPFIRVectorization rewrite pattern.\n";
+      return failure();
+    }
+
     // 1. Get the total length of the workload.
     Value inputSize = rewriter.create<memref::DimOp>(loc, input, c0);
     Value kernelSize = rewriter.create<memref::DimOp>(loc, kernel, c0);
@@ -72,8 +99,7 @@ public:
     Value tileStep = rewriter.create<ConstantIndexOp>(loc, 2048);
     Value vlStep = rewriter.create<ConstantIndexOp>(loc, 16);
     Value vlStepMinusOne = rewriter.create<arith::SubIOp>(loc, vlStep, c1);
-    FloatType f32 = FloatType::getF32(ctx);
-    VectorType vecTy = VectorType::get(16, f32);
+    VectorType vecTy = VectorType::get(16, fTy);
 
     // 3. Calculate full vectorization part.
 
