@@ -48,8 +48,12 @@ class DAPFIRVectorization : public OpRewritePattern<dap::FIROp> {
 public:
   using OpRewritePattern<dap::FIROp>::OpRewritePattern;
 
-  explicit DAPFIRVectorization(MLIRContext *context)
-      : OpRewritePattern(context) {}
+  explicit DAPFIRVectorization(MLIRContext *context, int64_t vecSizeParam,
+                               int64_t tileSizeParam)
+      : OpRewritePattern(context) {
+    vecSize = vecSizeParam;
+    tileSize = tileSizeParam;
+  }
 
   LogicalResult matchAndRewrite(dap::FIROp op,
                                 PatternRewriter &rewriter) const override {
@@ -96,10 +100,10 @@ public:
     Value kernelSize = rewriter.create<memref::DimOp>(loc, kernel, c0);
 
     // 2. Set the iteration step (tile size and vector size).
-    Value tileStep = rewriter.create<ConstantIndexOp>(loc, 2048);
-    Value vlStep = rewriter.create<ConstantIndexOp>(loc, 16);
+    Value tileStep = rewriter.create<ConstantIndexOp>(loc, tileSize);
+    Value vlStep = rewriter.create<ConstantIndexOp>(loc, vecSize);
     Value vlStepMinusOne = rewriter.create<arith::SubIOp>(loc, vlStep, c1);
-    VectorType vecTy = VectorType::get(16, fTy);
+    VectorType vecTy = VectorType::get(vecSize, fTy);
 
     // 3. Calculate full vectorization part.
 
@@ -214,6 +218,10 @@ public:
     rewriter.eraseOp(op);
     return success();
   }
+
+private:
+  int64_t vecSize;
+  int64_t tileSize;
 };
 
 class DAPIirVectorization : public OpRewritePattern<dap::IirOp> {
@@ -334,11 +342,6 @@ public:
 
 } // end anonymous namespace
 
-void populateVectorizeDAPConversionPatterns(RewritePatternSet &patterns) {
-  patterns.add<DAPFIRVectorization>(patterns.getContext());
-  patterns.add<DAPIirVectorization>(patterns.getContext());
-}
-
 //===----------------------------------------------------------------------===//
 // VectorizeDAPPass
 //===----------------------------------------------------------------------===//
@@ -350,6 +353,10 @@ public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(VectorizeDAPPass)
   VectorizeDAPPass() = default;
   VectorizeDAPPass(const VectorizeDAPPass &) {}
+  explicit VectorizeDAPPass(int64_t firVecSizeParam, int64_t firTileSizeParam) {
+    firVecSize = firVecSizeParam;
+    firTileSize = firTileSizeParam;
+  }
 
   StringRef getArgument() const final { return "vectorize-dap"; }
   StringRef getDescription() const final { return "Vectorize DAP Dialect."; }
@@ -362,6 +369,13 @@ public:
                     affine::AffineDialect, arith::ArithDialect,
                     linalg::LinalgDialect>();
   }
+
+  Option<int64_t> firVecSize{*this, "fir-vec-size",
+                             llvm::cl::desc("FIR Vector Size."),
+                             llvm::cl::init(16)};
+  Option<int64_t> firTileSize{*this, "fir-tile-size",
+                              llvm::cl::desc("FIR Tile Size."),
+                              llvm::cl::init(2048)};
 };
 } // end anonymous namespace.
 
@@ -383,7 +397,8 @@ void VectorizeDAPPass::runOnOperation() {
   // clang-format on
 
   RewritePatternSet patterns(context);
-  populateVectorizeDAPConversionPatterns(patterns);
+  patterns.add<DAPFIRVectorization>(context, firVecSize, firTileSize);
+  patterns.add<DAPIirVectorization>(context);
 
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
