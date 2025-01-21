@@ -31,6 +31,7 @@
 #include "DAP/DAPOps.h"
 #include "Utils/DAPUtils.h"
 #include <optional>
+#include <vector>
 
 using namespace mlir;
 using namespace buddy;
@@ -48,11 +49,12 @@ class DAPFIRVectorization : public OpRewritePattern<dap::FIROp> {
 public:
   using OpRewritePattern<dap::FIROp>::OpRewritePattern;
 
-  explicit DAPFIRVectorization(MLIRContext *context, int64_t vecSizeParam,
-                               int64_t tileSizeParam)
+  explicit DAPFIRVectorization(MLIRContext *context, int64_t vecSize_,
+                               int64_t tileSize_, int64_t unrollFactor_)
       : OpRewritePattern(context) {
-    vecSize = vecSizeParam;
-    tileSize = tileSizeParam;
+    vecSize = vecSize_;
+    tileSize = tileSize_;
+    unrollFactor = unrollFactor_;
   }
 
   LogicalResult matchAndRewrite(dap::FIROp op,
@@ -103,6 +105,15 @@ public:
     Value tileStep = rewriter.create<ConstantIndexOp>(loc, tileSize);
     Value vlStep = rewriter.create<ConstantIndexOp>(loc, vecSize);
     Value vlStepMinusOne = rewriter.create<arith::SubIOp>(loc, vlStep, c1);
+    std::vector<Value> unrollOffset;
+    int64_t step_ = 0;
+    for (int64_t i = 0; i < unrollFactor; ++i) {
+        Value Offset_ = rewriter.create<ConstantIndexOp>(loc, step_);
+        unrollOffset.push_back(Offset_);
+        step_ += vecSize;
+    }
+    // Value unrollFactor = rewriter.create<ConstantIndexOp>(loc, unrollFactor);
+    Value inLoopStep = rewriter.create<ConstantIndexOp>(loc, step_);
     VectorType vecTy = VectorType::get(vecSize, fTy);
 
     // 3. Calculate full vectorization part.
@@ -135,7 +146,7 @@ public:
                             b.create<vector::SplatOp>(loc, vecTy, kElem);
                         // 3.3 Vectorized computation.
                         b.create<scf::ForOp>(
-                            loc, address, upbound, vlStep,
+                            loc, address, upbound, inLoopStep,
                             ValueRange{std::nullopt},
                             [&](OpBuilder &b, Location loc, Value iv_i,
                                 ValueRange iargs) {
@@ -149,6 +160,14 @@ public:
                                   loc, kVec, inVec, outVec);
                               b.create<vector::StoreOp>(loc, fmaVec, output,
                                                         ValueRange{outOffset});
+                              for (int unrollIdx = 1; unrollIdx < unrollFactor; ++unrollIdx) {
+                                Value iv_i_tmp = b.create<arith::AddIOp>(loc, iv_i, unrollOffset[unrollIdx]);
+                                Value inVec = b.create<vector::LoadOp>(loc, vecTy, input, ValueRange{iv_i_tmp});
+                                Value outOffset = b.create<arith::AddIOp>(loc, iv_i_tmp, iv_n);
+                                Value outVec = b.create<vector::LoadOp>(loc, vecTy, output, ValueRange{outOffset});
+                                Value fmaVec = b.create<vector::FMAOp>(loc, kVec, inVec, outVec);
+                                b.create<vector::StoreOp>(loc, fmaVec, output, ValueRange{outOffset});
+                              }
                               b.create<scf::YieldOp>(loc);
                             });
 
@@ -222,6 +241,7 @@ public:
 private:
   int64_t vecSize;
   int64_t tileSize;
+  int64_t unrollFactor;
 };
 
 class DAPIirVectorization : public OpRewritePattern<dap::IirOp> {
@@ -376,6 +396,9 @@ public:
   Option<int64_t> firTileSize{*this, "fir-tile-size",
                               llvm::cl::desc("FIR Tile Size."),
                               llvm::cl::init(2048)};
+  Option<int64_t> firUnrollFactor{*this, "fir-unroll-factor",
+                                  llvm::cl::desc("FIR Unroll Factor."),
+                                  llvm::cl::init(1)};
 };
 } // end anonymous namespace.
 
@@ -397,7 +420,7 @@ void VectorizeDAPPass::runOnOperation() {
   // clang-format on
 
   RewritePatternSet patterns(context);
-  patterns.add<DAPFIRVectorization>(context, firVecSize, firTileSize);
+  patterns.add<DAPFIRVectorization>(context, firVecSize, firTileSize, firUnrollFactor);
   patterns.add<DAPIirVectorization>(context);
 
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
